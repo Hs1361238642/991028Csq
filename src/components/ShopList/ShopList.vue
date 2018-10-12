@@ -57,7 +57,7 @@
   export default {
     data () {
       return {
-        imgBaseUrl: 'http://cangdu.org:8001/img/'
+        imgBaseUrl: 'https://fuss10.elemecdn.com'
       }
     },
     computed: {
