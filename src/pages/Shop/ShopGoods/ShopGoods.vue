@@ -1,25 +1,24 @@
 <template>
-  <div class="goods-wrap">
+  <div>
     <div class="goods">
-      <div class="menu-wrapper" ref="menuWrapper">
-        <ul>
-          <!--current-->   <!--currentIndex-->
-          <li class="menu-item" v-for="(good, index) in goods"
-              :key="index" :class="{current: currentIndex===index}" @click="clickMenu(index)">
+      <div class="menu-wrapper">
+        <ul ref="typesUl">
+          <!--current-->
+          <li class="menu-item" v-for="(good, index) in goods" :key="index"
+              :class="{current: index===currentIndex}" @click="selectItem(index)">
             <span class="text bottom-border-1px">
-              <img class="icon" v-if="good.icon" :src="good.icon">
+              <img class="icon" :src="good.icon" v-if="good.icon">
               {{good.name}}
             </span>
           </li>
         </ul>
       </div>
-      <div class="foods-wrapper" ref="foodsWrapper">
-        <ul>
-          <li class="food-list food-list-hook" v-for="(good, index) in goods" :key="index">
+      <div class="foods-wrapper">
+        <ul ref="foodsUl">
+          <li class="food-list-hook" v-for="(good, index) in goods" :key="index">
             <h1 class="title">{{good.name}}</h1>
             <ul>
-              <li class="food-item bottom-border-1px" v-for="(food, index) in good.foods"
-                  :key="index" @click="showFood(food)">
+              <li class="food-item bottom-border-1px" v-for="(food, index) in good.foods" :key="index" @click="showFood(food)">
                 <div class="icon">
                   <img width="57" height="57" :src="food.icon">
                 </div>
@@ -28,14 +27,13 @@
                   <p class="desc">{{food.description}}</p>
                   <div class="extra">
                     <span class="count">月售{{food.sellCount}}份</span>
-                    <span>好评率{{food.rating}}%</span>
-                  </div>
+                    <span>好评率{{food.rating}}%</span></div>
                   <div class="price">
                     <span class="now">￥{{food.price}}</span>
                     <span class="old" v-if="food.oldPrice">￥{{food.oldPrice}}</span>
                   </div>
                   <div class="cartcontrol-wrapper">
-                    <cart-control :food="food" />
+                    <CartControl :food="food"/>
                   </div>
                 </div>
               </li>
@@ -43,135 +41,123 @@
           </li>
         </ul>
       </div>
-      <shop-cart />
-    </div>
-    <food :food="food" ref="food" />
-  </div>
-</template>
 
+      <ShopCart/>
+    </div>
+    <Food :food="food" ref="food"/>
+  </div>
+
+</template>
 <script>
+  /*
+  1. 滑动右侧列表, 左侧列表的当前分类同步变化
+  2. 点击左侧某个分类项, 右侧列表滑动到对应位置
+  3. 完善1的功能: 使用左侧当前分类总是可见
+  currentIndex: 当前分类的下标
+     右侧列表Y轴方向滑动的坐标: scrollY
+     右侧分类li的top值组成的数据: tops
+  tops: 列表显示之后统计, 后面不会再变化了
+  scrollY: 在右侧滑动过程中不断更新
+   */
   import BScroll from 'better-scroll'
   import {mapState} from 'vuex'
-
-  import CartControl from '../../../components/CartControl/CartControl.vue'
-  import ShopCart from '../../../components/ShopCart/ShopCart.vue'
-  import Food from '../../../components/Food/Food.vue'
-
+  import CartControl from "../../../components/CartControl/CartControl";
+  import  ShopCart from  '../../../components/ShopCart/ShopCart.vue'
+  import Food from "../../../components/Food/Food";
   export default {
+    components: {Food, CartControl},
     data() {
       return {
-        scrollY: 0, //右侧滑动的y坐标
-        tops: [], // 所有右侧分类li标签的top所组成数组
-        food: {}
+        scrollY: 0, // 右侧列表Y轴方向滑动的坐标
+        tops: [], // 右侧分类li的top值组成的数据
+        food: {},
+      }
+    },
+    computed: {
+      ...mapState(['goods']),
+      // 当前分类的下标
+      currentIndex () {
+        const {scrollY, tops} = this
+        // scrollY大于或等于当前top && 小于下一个top
+        const index = tops.findIndex((top, index) => scrollY>=top && scrollY<tops[index+1])
+        if(this.index!=index) {// 只有当当前分类下标发生改变才去执行
+          this.index = index
+          // 让右侧滚动到index所对应的位置
+          if(this.leftScroll) {
+            this.leftScroll.scrollToElement(this.$refs.typesUl.children[index], 200)
+          }
+        }
+        return index
       }
     },
     mounted() {
-      this.$store.dispatch('getShopGoods', () => {
-        // 从后台获取的数据已更新到状态中, 但界面还没有更新(界面的更新是异步的)
-        /*setTimeout(() => {
-          new BScroll(this.$refs.menuWrapper)
-        }, 20)*/
-        // 在状态更新之后执行
-        this.$nextTick(() => { // 回调函数在界面更新之后立即执行
+      this.$store.dispatch('getGoods', () => { // 状态数据变化了
+        this.$nextTick(() => { // 列表界面更新显示后执行
+          // 初始化滚动对象
           this._initScroll()
+          // 初始化tops数据
           this._initTops()
         })
       })
     },
-
     methods: {
       _initScroll () {
-        // 控制左侧列表滑动的scroll
-        new BScroll(this.$refs.menuWrapper, {
-          click: true  // 分发点击事件
+        // 左侧列表滚动对象
+        this.leftScroll = new BScroll('.menu-wrapper', {
+          click: true // 会派发点击事件
         })
-
-        // 控制右侧列表滑动的scroll
-        this.foodsScroll = new BScroll(this.$refs.foodsWrapper, {
-          // startY: -100
-          probeType: 1, //会在滑动(手指触摸)过程中实时派发scroll事件
-          click: true
+        // 右侧列表滚动对象
+        this.rightScroll = new BScroll('.foods-wrapper', {
+          click: true,
+          probeType: 1  // 非实时回调, 非触摸滑动不会回调
         })
-
-        // 监视右侧列表的滚动
-        this.foodsScroll.on('scroll', (event) => {
-          // 获取滚动的y坐标
-          console.log('scroll', event.y)
-          this.scrollY = Math.abs(event.y)
+        // 绑定scroll的监听
+        this.rightScroll.on('scroll', ({x, y}) => {
+          console.log('scroll', x, y)
+          // 更新scrollY
+          this.scrollY = Math.abs(y)
         })
-
-        // 监视右侧列表的滚动结束
-        this.foodsScroll.on('scrollEnd', (event) => {
-          // 获取滚动的y坐标
-          console.log('scrollEnd', event.y)
-          this.scrollY = Math.abs(event.y)
+        // 绑定滚动结束的监听
+        this.rightScroll.on('scrollEnd', ({x, y}) => {
+          console.log('scrollEnd', x, y)
+          // 更新scrollY
+          this.scrollY = Math.abs(y)
         })
       },
-
       _initTops () {
-        // 找到所有li
-        const lis = this.$refs.foodsWrapper.getElementsByClassName('food-list-hook')
-        // 统计top
         const tops = []
         let top = 0
         tops.push(top)
-        Array.prototype.slice.call(lis).forEach(li => {
+        // 得到所有分类li的伪数组
+        const lis = this.$refs.foodsUl.querySelectorAll('.food-list-hook')
+        lis.forEach(li => {
           top += li.clientHeight
           tops.push(top)
         })
         // 更新状态
         this.tops = tops
-        console.log(tops)
+        console.log('tops=', tops)
       },
-
-      clickMenu (index) {
-        // console.log('clickMenu()')
-
-        // 立即更新scrollY, 立即让currentIndex重新计算
-        this.scrollY = this.tops[index]
-        // 让右侧列表平滑滚动到指定位置
-        this.foodsScroll.scrollTo(0, -this.tops[index], 300)
+      // 选择左侧某个分类项
+      selectItem (index) {
+        // 得到index对应的目标位置的y坐标
+        const y = -this.tops[index]
+        // 立即更新scrollY
+        this.scrollY = -y
+        // 让右侧列表滚动到此处
+        this.rightScroll.scrollTo(0, y, 300)
       },
-
       showFood (food) {
-        // 更新food
         this.food = food
-        // 显示food组件
         this.$refs.food.toggleShow()
       }
     },
-
-    computed: {
-      ...mapState(['goods']),
-
-      /*
-      1. 分析出相关的数据
-          scrollY: 右侧滑动的y坐标
-          tops: 所有右侧分类li标签的top所组成数组
-      2. 分析计算逻辑
-          tops = [0, 10, 15, 18, 15]
-          scrollY =      14, 17, 20
-          currentIndex = 1, 2, 3
-          scrollY>=top && scrollY<nextTop
-      计算属性什么就会执行?: 相关的数据发生了变化
-       */
-      currentIndex () {
-        const {tops, scrollY} = this
-        console.log('currentIndex', scrollY)
-        return tops.findIndex((top, index) => {
-          return scrollY>=top && scrollY<tops[index+1]
-        })
-      },
-    },
-
     components: {
-      CartControl,
-      ShopCart,
-      Food
+      Food,
+      ShopCart
     }
   }
 </script>
-
 <style lang="stylus" rel="stylesheet/stylus">
   @import "../../../common/stylus/mixins.styl"
   .goods
@@ -269,4 +255,4 @@
             position: absolute
             right: 0
             bottom: 12px
-</style>
+  </style>

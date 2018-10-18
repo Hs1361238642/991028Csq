@@ -4,6 +4,6 @@
 import moment from 'moment'
 import Vue from 'vue'
 
-Vue.filter('dateString', function (value, format) {
-  return moment(value).format(format || 'YYYY-MM-DD HH:mm:ss')
+Vue.filter('date-format', function (value, format='YYYY-MM-DD HH:mm:ss') {
+  return moment(value).format(format)
 })

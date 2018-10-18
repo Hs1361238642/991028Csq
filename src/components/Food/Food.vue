@@ -1,15 +1,14 @@
 <template>
   <transition name="fade">
-    <div class="food" v-if="isShow" ref="food">
+    <div class="food" v-if="isShow">
       <div class="food-content">
         <div class="image-header">
-          <img v-lazy="food.image">
+          <img :src="food.image">
           <p class="foodpanel-desc">{{food.info}}</p>
           <div class="back" @click="toggleShow">
             <i class="iconfont icon-arrow_left"></i>
           </div>
         </div>
-
         <div class="content">
           <h1 class="title">{{food.name}}</h1>
           <div class="detail">
@@ -18,49 +17,36 @@
           </div>
           <div class="price">
             <span class="now">￥{{food.price}}</span>
-            <span class="old" v-show="food.oldPrice">￥{{food.oldPrice}}</span></div>
-          <div class="cartcontrol-wrapper">
-            <cart-control :food="food"/>
+            <span class="old" v-show="food.oldPrice">￥{{food.oldPrice}}</span>
           </div>
-        </div>
+          <div class="cartcontrol-wrapper">
+            <CartControl :food="food"/>
+         </div>
       </div>
-      <div class="food-cover" @click="toggleShow"></div>
+    </div>
+    <div class="food-cover" @click="toggleShow"></div>
     </div>
   </transition>
 </template>
-
 <script>
-  import BScroll from 'better-scroll'
-  import CartControl from '../CartControl/CartControl.vue'
-  import RatingSelect from '../RatingSelect/RatingSelect.vue'
-  import {ratingsMixin} from '../../common/utils/mixins'
-
+  import CartControl from "../CartControl/CartControl";
   export default {
-    mixins: [ratingsMixin],
-
+    components: {CartControl},
     props: {
       food: Object
     },
-
-    data() {
+    data () {
       return {
         isShow: false
       }
     },
-
     methods: {
-      toggleShow() {
+      toggleShow () {
         this.isShow = !this.isShow
-      },
-    },
-
-    components: { // 局部注册
-      CartControl,
-      RatingSelect
+      }
     }
   }
 </script>
-
 <style lang="stylus" rel="stylesheet/stylus" scoped>
   @import "../../common/stylus/mixins.styl"
 
@@ -176,3 +162,4 @@
       background-color rgba(0, 0, 0, 0.5)
 
 </style>
+

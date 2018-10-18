@@ -89,7 +89,7 @@ export default {
   },
 
   // 异步获取商家评价列表
-  async getShopRatings({commit}, cb) {
+  async getRatings({commit}, cb) {
     const result = await reqShopRatings()
     if(result.code===0) {
       const ratings = result.data
@@ -100,7 +100,7 @@ export default {
   },
 
   // 异步获取商家商品列表
-  async getShopGoods({commit}, cb) {
+  async getGoods({commit}, cb) {
     const result = await reqShopGoods()
     if(result.code===0) {
       const goods = result.data

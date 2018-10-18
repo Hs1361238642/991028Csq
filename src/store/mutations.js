@@ -58,8 +58,7 @@ export default {
     if (food.count) {
       food.count--
       if(food.count===0) {
-        const index = state.cartFoods.indexOf(food)
-        state.cartFoods.splice(index, 1)
+        state.cartFoods.splice(state.cartFoods.indexOf(food), 1)
       }
     }
   },

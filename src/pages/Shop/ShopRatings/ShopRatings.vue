@@ -1,5 +1,5 @@
 <template>
-  <div class="ratings" ref="ratings">
+  <div class="ratings">
     <div class="ratings-content">
       <div class="overview">
         <div class="overview-left">
@@ -10,12 +10,12 @@
         <div class="overview-right">
           <div class="score-wrapper">
             <span class="title">服务态度</span>
-            <Star :score="info.serviceScore" :size="36" />
+            <Star :score="info.serviceScore" :size="36"/>
             <span class="score">{{info.serviceScore}}</span>
           </div>
           <div class="score-wrapper">
             <span class="title">商品评分</span>
-            <Star :score="info.foodScore" :size="36" />
+            <Star :score="info.foodScore" :size="36"/>
             <span class="score">{{info.foodScore}}</span>
           </div>
           <div class="delivery-wrapper">
@@ -25,82 +25,92 @@
         </div>
       </div>
 
-      <split/>
+      <Split/>
 
-      <rating-select :descs="['全部', '满意', '不满意']"
-                    :ratings="ratings"
-                    :selectType="selectType"
-                    :onlyContent="onlyContent"
-                    @setSelectType="setSelectType"
-                    @toggleOnlyContent="toggleOnlyContent" />
+      <RatingsFilter :selectType="selectType"
+                      :onlyContent="onlyContent"
+                      @setSelectType="setSelectType"
+                      @toggleOnlyContent="toggleOnlyContent"/>
 
       <div class="rating-wrapper">
         <ul>
-          <li class="rating-item" v-for="(rating, index) in filterRatings" :key="index">
+          <li class="rating-item" v-for="(rating,index) in filterRatings" :key="index">
             <div class="avatar">
               <img width="28" height="28" :src="rating.avatar">
             </div>
             <div class="content">
               <h1 class="name">{{rating.username}}</h1>
               <div class="star-wrapper">
-                <Star :score="rating.score" :size="24" />
+                <Star :score="rating.score" :size="24"/>
                 <span class="delivery">{{rating.deliveryTime}}</span>
               </div>
               <p class="text">{{rating.text}}</p>
               <div class="recommend">
                 <span class="iconfont" :class="rating.rateType===0 ? 'icon-thumb_up' : 'icon-thumb_down'"></span>
-                <span class="item" v-for="(item, index) in rating.recommend" :key="index">{{item}}</span>
               </div>
-              <div class="time">{{rating.rateTime | dateString}}</div>
+              <div class="time">{{rating.rateTime | date-format}}</div>
             </div>
           </li>
         </ul>
       </div>
-
     </div>
   </div>
 </template>
-
 <script>
   import BScroll from 'better-scroll'
   import {mapState} from 'vuex'
-  import Star from '../../../components/Star/Star.vue'
-  import RatingSelect from '../../../components/RatingSelect/RatingSelect.vue'
-  import {ratingsMixin} from '../../../common/utils/mixins'
-
+  import Star from "../../../components/Star/Star"
+  import RatingsFilter from '../../../components/RatingsFilter/RatingsFilter'
   export default {
-    mixins: [ratingsMixin],
-    mounted() {
-      this.$store.dispatch('getShopRatings', () => {
+    data () {
+      return {
+        selectType: 1,
+        onlyContent: false,
+      }
+    },
+    mounted () {
+      this.$store.dispatch('getRatings',() => {
         this.$nextTick(() => {
-          this.scroll = new BScroll(this.$refs.ratings, {click: true})
+          new BScroll('.ratings', {
+            click: true
+          })
         })
       })
     },
-
     computed: {
-      ...mapState(['ratings', 'info']),
+      ...mapState(['info','ratings']),
+      filterRatings () {
+        const {ratings, selectType, onlyContent} = this
+        return ratings.filter(rating => {
+          const {rateType,text} = rating
+          return (selectType===2 || selectType===rateType) && (!onlyContent || text.length>0)
+        })
+      }
     },
-
+    methods: {
+      setSelectType(selectType) {
+        this.selectType = selectType
+      },
+      toggleOnlyContent () {
+        this.onlyContent = !this.onlyContent
+    }
+   },
     components: {
       Star,
-      RatingSelect
+      RatingsFilter
     }
   }
 </script>
-
-
 <style lang="stylus" rel="stylesheet/stylus">
   @import "../../../common/stylus/mixins.styl"
 
   .ratings
     position: absolute
-    top: 195px
+    top: 174px
     bottom: 0
     left: 0
     width: 100%
     overflow: hidden
-    background: #fff
     .overview
       display: flex
       padding: 18px 0
@@ -225,3 +235,6 @@
             font-size: 10px
             color: rgb(147, 153, 159)
 </style>
+
+
+
